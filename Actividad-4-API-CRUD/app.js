@@ -105,8 +105,49 @@ app.put("/cursos/:id", (req, res) => {
   cursos[index] = { id, ...updateCurso };
   res.json(cursos[index]);
 });
+//MIDDLEWARE
+const validacionUsuario = (req, res, next) => {
+  const { nombre, apellido, mail, edad, cursos } = req.body;
 
-app.post("/usuarios", (req, res) => {
+  if (!nombre || !apellido || !mail || !edad || !cursos) {
+    return res
+      .status(400)
+      .json({ error: "Todos los campos son obligatorios." });
+  }
+
+  if (nombre.length > 20 || apellido.length > 20) {
+    return res.status(400).json({
+      error: "El nombre de usuario no puede tener más de 20 caracteres.",
+    });
+  }
+
+  const caracteresEspeciales = /[%$#!*]/;
+  if (
+    caracteresEspeciales.test(nombre) ||
+    caracteresEspeciales.test(apellido)
+  ) {
+    return res.status(400).json({
+      error:
+        "El nombre de usuario no puede contener caracteres especiales (%$#!*).",
+    });
+  }
+
+  if (edad < 18) {
+    return res
+      .status(400)
+      .json({ error: "El usuario debe tener al menos 18 años." });
+  }
+
+  if (cursos.length < 2) {
+    return res.status(400).json({
+      error: "El usuario debe estar inscrito en al menos dos cursos.",
+    });
+  }
+
+  next();
+};
+
+app.post("/usuarios", validacionUsuario, (req, res) => {
   const newUsuario = req.body;
   usuarios.push(newUsuario);
   res.status(201).json(newUsuario);
@@ -136,6 +177,21 @@ app.delete("/cursos/:id", (req, res) => {
   }
   const deletedCurso = cursos.splice(index, 1);
   res.json(deletedCurso);
+});
+
+app.get("/cursos/:docente", (req, res) => {
+  const docenteBuscado = req.params.docente;
+  const cursosPorDocente = cursos.filter((value) =>
+    value.docente.includes(docenteBuscado)
+  );
+
+  if (cursosPorDocente.length > 0) {
+    res.json(cursosPorDocente);
+  } else {
+    res
+      .status(404)
+      .json({ error: "No se encontraron cursos con ese docente." });
+  }
 });
 
 app.listen(port, () => {
